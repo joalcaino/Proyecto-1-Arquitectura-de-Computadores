@@ -23,6 +23,7 @@ module calculadora_datapath (
     input  wire       OP1,
     input  wire       OP0,
     input  wire       confirmar,    // pulso de confirmar/ejecutar
+    input  wire       reset,
     input  wire       clk,
     output wire [3:0] resultado
 );
@@ -39,7 +40,7 @@ module calculadora_datapath (
     );
 
     registro_4bits reg_inst (
-        .D_nuevo(R_next), .confirmar(confirmar), .clk(clk), .Q(resultado)
+        .D_nuevo(R_next), .confirmar(confirmar), .reset(reset), .clk(clk), .Q(resultado)
     );
 
 endmodule

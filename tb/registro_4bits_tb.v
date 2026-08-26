@@ -1,18 +1,18 @@
 // registro_4bits_tb.v
 // Testbench del registro de 4 bits: confirma que con confirmar=0 el valor
-// se retiene aunque D_nuevo cambie, y que con confirmar=1 el valor nuevo se
-// carga en el siguiente flanco de reloj.
+// se retiene aunque D_nuevo cambie, que con confirmar=1 el valor nuevo se
+// carga en el siguiente flanco de reloj, y que reset fuerza 0000.
 
 `timescale 1ns/1ps
 
 module registro_4bits_tb;
 
     reg  [3:0] D_nuevo;
-    reg        confirmar, clk;
+    reg        confirmar, reset, clk;
     wire [3:0] Q;
     integer errores;
 
-    registro_4bits dut (.D_nuevo(D_nuevo), .confirmar(confirmar), .clk(clk), .Q(Q));
+    registro_4bits dut (.D_nuevo(D_nuevo), .confirmar(confirmar), .reset(reset), .clk(clk), .Q(Q));
 
     initial clk = 0;
     always #10 clk = ~clk;
@@ -22,9 +22,10 @@ module registro_4bits_tb;
         $dumpvars(0, registro_4bits_tb);
         errores = 0;
 
-        // Estado inicial conocido: cargar 0000
-        D_nuevo = 4'b0000; confirmar = 1;
+        // Estado inicial conocido, via reset (no via confirmar+D_nuevo=0)
+        D_nuevo = 4'b1111; confirmar = 0; reset = 1;
         @(posedge clk); #1;
+        reset = 0;
         if (Q !== 4'b0000) begin errores=errores+1; $display("FALLO estado inicial: Q=%b",Q); end
         else $display("OK estado inicial: Q=%b", Q);
 

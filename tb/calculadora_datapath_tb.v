@@ -9,7 +9,7 @@
 module calculadora_datapath_tb;
 
     reg  [3:0] op1, op2_externo;
-    reg        selector_op2, confirmar;
+    reg        selector_op2, confirmar, reset;
     reg        OP2, OP1, OP0;
     reg        clk;
     wire [3:0] resultado;
@@ -19,7 +19,7 @@ module calculadora_datapath_tb;
     calculadora_datapath dut (
         .op1(op1), .op2_externo(op2_externo), .selector_op2(selector_op2),
         .OP2(OP2), .OP1(OP1), .OP0(OP0),
-        .confirmar(confirmar), .clk(clk), .resultado(resultado)
+        .confirmar(confirmar), .reset(reset), .clk(clk), .resultado(resultado)
     );
 
     initial clk = 0;
@@ -42,6 +42,12 @@ module calculadora_datapath_tb;
         $dumpfile("calculadora_datapath_tb.vcd");
         $dumpvars(0, calculadora_datapath_tb);
         errores = 0;
+        reset = 1;
+        op1 = 4'd9; op2_externo = 4'd3; selector_op2 = 0;
+        {OP2,OP1,OP0} = 3'b000; confirmar = 0;
+        @(posedge clk); #1;
+        reset = 0;
+        verificar("estado inicial (reset)", 4'b0000);
 
         // 1) Reinicio: fuerza resultado = 0000 sin importar los operandos
         op1 = 4'd9; op2_externo = 4'd3; selector_op2 = 0;
@@ -84,7 +90,7 @@ module calculadora_datapath_tb;
         @(posedge clk); #1;
         verificar("reinicio final", 4'b0000);
 
-        if (errores == 0) $display("TODOS LOS CASOS PASARON (7/7).");
+        if (errores == 0) $display("TODOS LOS CASOS PASARON (8/8).");
         else $display("%0d CASOS FALLARON.", errores);
 
         $finish;
