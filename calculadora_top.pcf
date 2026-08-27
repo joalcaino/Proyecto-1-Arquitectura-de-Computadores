@@ -1,0 +1,64 @@
+# calculadora_top.pcf
+# Mapeo de pines fisicos de la Nandland Go Board (iCE40HX1K, VQ100) para
+# los puertos de calculadora_top.v. Proyecto 1 - Arquitectura de Computadores.
+#
+# Fuente de los numeros de pin: pagina/tutoriales oficiales de Nandland
+# (nandland.com/go-board-tutorials) y el archivo .pcf de ejemplo de un
+# mirror de terceros (github.com/billiegoose/nandland-tutorial-projects),
+# ambos apuntando al mismo chip/empaquetado correcto de la Go Board
+# (iCE40HX1K VQ100). Pendiente cruzar con la guia oficial de Nandland en
+# Fase 6 antes de la sintesis final.
+#
+# OJO - lo unico que NO pude confirmar con la documentacion: cual de los
+# 4 pines de boton (53/51/54/52) es fisicamente el superior-izquierdo,
+# inferior-izquierdo, superior-derecho e inferior-derecho. Nandland solo
+# los nombra "Switch 1/2/3/4" sin indicar su posicion en la placa; lo
+# unico indirecto que encontre es el proyecto PONG de Nandland, donde
+# Switch_1/Switch_2 controlan "arriba/abajo" de un jugador y
+# Switch_3/Switch_4 lo mismo para el otro, lo que sugiere que van en
+# pares verticales (1 arriba de 2, 3 arriba de 4) -- consistente con nuestro
+# esquema superior/inferior, pero no 100% confirmado.
+#
+# Mapeo usado abajo (mejor estimacion, hay que VERIFICAR EN LA PLACA REAL
+# antes de la demo: cargar el bitstream, apretar cada boton fisico uno
+# por uno y confirmar con los LEDs/displays que mueve lo que se espera
+# segun el enunciado; si algun boton esta cambiado, se arregla
+# facilmente cambiando el numero de pin en este archivo, sin tocar
+# ningun .v):
+#   boton_subir_crudo     (superior izquierdo, incrementar) -> Switch_1 (pin 53)
+#   boton_bajar_crudo     (inferior izquierdo, disminuir)   -> Switch_2 (pin 51)
+#   boton_confirmar_crudo (superior derecho, confirmar)     -> Switch_3 (pin 54)
+#   boton_anterior_crudo  (inferior derecho, resultado ant.)-> Switch_4 (pin 52)
+
+# ---- Reloj (25 MHz) ----
+set_io clk 15
+
+# ---- Botones (crudos, sin debounce -- eso lo hace calculadora_top.v adentro) ----
+set_io boton_subir_crudo     53
+set_io boton_bajar_crudo     51
+set_io boton_confirmar_crudo 54
+set_io boton_anterior_crudo  52
+
+# ---- LEDs: leds[2:0]=codigo de operacion, leds[3]=selector_op2_activo ----
+set_io leds[0] 56
+set_io leds[1] 57
+set_io leds[2] 59
+set_io leds[3] 60
+
+# ---- Primer display (signo +/-) ----
+set_io seg1_a 3
+set_io seg1_b 4
+set_io seg1_c 93
+set_io seg1_d 91
+set_io seg1_e 90
+set_io seg1_f 1
+set_io seg1_g 2
+
+# ---- Segundo display (digito hexadecimal) ----
+set_io seg2_a 100
+set_io seg2_b 99
+set_io seg2_c 97
+set_io seg2_d 95
+set_io seg2_e 94
+set_io seg2_f 8
+set_io seg2_g 96
