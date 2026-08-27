@@ -40,9 +40,17 @@ set_io boton_confirmar_crudo 54
 set_io boton_anterior_crudo  52
 
 # ---- LEDs: leds[2:0]=codigo de operacion, leds[3]=selector_op2_activo ----
-set_io leds[0] 56
+# NOTA (27-ago): leds[0] y leds[2] estan intercambiados a proposito respecto
+# a como estaban antes. Antes el LED mas a la izquierda mostraba el bit
+# MENOS significativo del codigo de operacion (leds[0]), lo cual confundia
+# al leer el numero en binario. Ahora el LED mas a la izquierda muestra el
+# bit MAS significativo (leds[2]), igual que se lee un numero binario
+# normalmente (MSB primero, de izquierda a derecha): leds[2] leds[1] leds[0].
+# leds[3] (el indicador de "usar resultado anterior") sigue en el mismo
+# lugar, el LED mas a la derecha de los 4.
+set_io leds[0] 59
 set_io leds[1] 57
-set_io leds[2] 59
+set_io leds[2] 56
 set_io leds[3] 60
 
 # ---- Primer display (signo +/-) ----
