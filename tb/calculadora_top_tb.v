@@ -34,8 +34,9 @@ module calculadora_top_tb;
     initial clk = 0;
     always #10 clk = ~clk;
 
-    // Mantiene un boton "apretado" el tiempo suficiente para pasar los
-    // 4096 ciclos del debounce real (~164us a 25MHz -- ver debounce.v)
+    // Mantiene un boton "apretado" el tiempo suficiente para pasar el
+    // umbral real de debounce (~262144 ciclos, ~10.5ms a 25MHz, logrado
+    // con un preescaler de 6 bits + contador de 12 bits -- ver debounce.v)
     // y que el detector de flanco genere su pulso, y despues lo "suelta"
     // el tiempo suficiente para que el debounce tambien acepte la soltada
     // (deja todo listo para el siguiente apreton).
@@ -48,13 +49,18 @@ module calculadora_top_tb;
     // visto el boton en 1. Un task puede leer/escribir libremente las
     // variables de su propio modulo, asi que esto evita ese problema.
     //
-    // AVISO: el umbral de debounce paso por tres versiones (256 ciclos ->
-    // demasiado corto para el rebote real; 262144 ciclos/18 bits -> umbral
-    // correcto pero cadena de sumadores demasiado larga, no cerraba tiempo
-    // a 25MHz en el chip real; 4096 ciclos/12 bits -> version actual,
-    // verificada en la placa). Ver el historial completo en debounce.v.
+    // AVISO: el umbral de debounce paso por varias versiones (256 ciclos ->
+    // demasiado corto para el rebote real; un solo contador de 18 bits/
+    // 262144 ciclos -> umbral correcto pero cadena de sumadores demasiado
+    // larga, no cerraba tiempo a 25MHz en el chip real; un solo contador de
+    // 12 bits/4096 ciclos -> cadena corta y segura, pero umbral otra vez
+    // insuficiente; preescaler de 6 bits + contador de 12 bits -> version
+    // actual, misma cadena corta y segura pero con el umbral de tiempo
+    // largo completo, verificada en la placa). Ver el historial completo
+    // en debounce.v. Con este umbral la secuencia de 13 pasos tarda varios
+    // minutos en simular con Icarus -- es normal, no esta colgado.
     localparam SUBIR = 0, BAJAR = 1, CONFIRMAR = 2, ANTERIOR = 3;
-    localparam HOLD = 4200; // >4096, con margen
+    localparam HOLD = 262200; // >262144, con margen
 
     task presionar;
         input integer cual;
@@ -171,9 +177,10 @@ module calculadora_top_tb;
         presionar(ANTERIOR); #1;
         verificar("op2 = anterior (8)", 4'b1010, 7'b1111110, 7'b0000000);
 
-        // ---- Confirmar -> ejecuta 2-8 (mod16) = 10 (1010) y MUESTRA_RESULTADO ----
+        // ---- Confirmar -> ejecuta 2-8 (mod16) = 1010 = -6 en complemento a dos.
+        // El display de hex muestra la MAGNITUD (6), no el patron crudo (A) ----
         presionar(CONFIRMAR); #1;
-        verificar("resultado 2-8=10", 4'b1010, 7'b1111110, 7'b0001000);
+        verificar("resultado 2-8=-6", 4'b1010, 7'b1111110, 7'b0100000);
 
         // ---- Confirmar -> vuelve a ELEGIR_OPERACION, selector se limpia ----
         presionar(CONFIRMAR); #1;

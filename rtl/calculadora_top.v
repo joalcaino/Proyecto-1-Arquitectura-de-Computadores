@@ -102,6 +102,19 @@ module calculadora_top (
     );
 
     // ---- 6) Decodificadores de 7 segmentos ----
+    // El segundo display muestra la MAGNITUD (valor absoluto) de
+    // valor_mostrado, no el patron de bits crudo -- si no, un valor
+    // negativo como 1001 (=-7 en complemento a dos) se veria como "-9"
+    // en vez de "-7" (bug encontrado probando en la placa real: la
+    // secuencia de subir/bajar mostraba -8,-9,-A...-F en vez de
+    // -8,-7,-6...-1). magnitud_4bits.v calcula esto: si es negativo,
+    // magnitud = complemento a dos de valor_mostrado; si es positivo o
+    // cero, la magnitud es el valor mismo.
+    wire [3:0] magnitud_mostrada;
+    magnitud_4bits calc_magnitud (
+        .valor(valor_mostrado), .signo(valor_mostrado[3]), .magnitud(magnitud_mostrada)
+    );
+
     wire signo_a, signo_b, signo_c, signo_d, signo_e, signo_f, signo_g;
     wire hex_a, hex_b, hex_c, hex_d, hex_e, hex_f, hex_g;
 
@@ -112,7 +125,7 @@ module calculadora_top (
     );
 
     decodificador_hex_7seg dec_hex (
-        .digito(valor_mostrado),
+        .digito(magnitud_mostrada),
         .seg_a(hex_a), .seg_b(hex_b), .seg_c(hex_c), .seg_d(hex_d),
         .seg_e(hex_e), .seg_f(hex_f), .seg_g(hex_g)
     );
