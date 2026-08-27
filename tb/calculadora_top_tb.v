@@ -35,10 +35,10 @@ module calculadora_top_tb;
     always #10 clk = ~clk;
 
     // Mantiene un boton "apretado" el tiempo suficiente para pasar los
-    // 256 ciclos del debounce y que el detector de flanco genere su
-    // pulso, y despues lo "suelta" el tiempo suficiente para que el
-    // debounce tambien acepte la soltada (deja todo listo para el
-    // siguiente apreton).
+    // 262144 ciclos del debounce real (~10.5ms a 25MHz -- ver debounce.v)
+    // y que el detector de flanco genere su pulso, y despues lo "suelta"
+    // el tiempo suficiente para que el debounce tambien acepte la soltada
+    // (deja todo listo para el siguiente apreton).
     //
     // NOTA: se referencian directamente los reg de arriba (subir/bajar/
     // confirmar/anterior) en vez de usar un argumento "output" del task,
@@ -47,7 +47,14 @@ module calculadora_top_tb;
     // @(posedge clk) intermedios) -- con "output" el DUT nunca habria
     // visto el boton en 1. Un task puede leer/escribir libremente las
     // variables de su propio modulo, asi que esto evita ese problema.
+    //
+    // AVISO: con el umbral real (262144, antes era 256 en una version
+    // vieja que resulto ser demasiado corta en la placa real -- ver el
+    // gotcha de debounce en el proyecto), esta secuencia de 13 pasos
+    // simula bastante tiempo real y puede tardar varios minutos en
+    // correr con Icarus. Es normal, no es que este colgado.
     localparam SUBIR = 0, BAJAR = 1, CONFIRMAR = 2, ANTERIOR = 3;
+    localparam HOLD = 262200; // >262144, con margen
 
     task presionar;
         input integer cual;
@@ -58,14 +65,14 @@ module calculadora_top_tb;
                 CONFIRMAR: boton_confirmar_crudo = 1;
                 ANTERIOR:  boton_anterior_crudo  = 1;
             endcase
-            repeat (300) @(posedge clk);
+            repeat (HOLD) @(posedge clk);
             case (cual)
                 SUBIR:     boton_subir_crudo     = 0;
                 BAJAR:     boton_bajar_crudo     = 0;
                 CONFIRMAR: boton_confirmar_crudo = 0;
                 ANTERIOR:  boton_anterior_crudo  = 0;
             endcase
-            repeat (300) @(posedge clk);
+            repeat (HOLD) @(posedge clk);
         end
     endtask
 

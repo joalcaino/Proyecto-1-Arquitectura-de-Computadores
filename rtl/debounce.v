@@ -4,19 +4,22 @@
 //
 // Idea: mientras la señal cruda del boton (que rebota, cambia rapido varias
 // veces al presionar/soltar) sea DISTINTA de la señal ya estabilizada, se
-// cuenta con contador_incremental_8bits. Si la señal cruda deja de cambiar
-// y se mantiene igual por 256 ciclos de reloj seguidos, se la acepta como
-// el nuevo valor estable. Si en cualquier momento vuelve a coincidir con
-// la estable (rebote), el contador se limpia y hay que esperar otros 256
-// ciclos de estabilidad para que se acepte cualquier cambio futuro.
+// cuenta con contador_incremental_18bits. Si la señal cruda deja de cambiar
+// y se mantiene igual por 262144 ciclos de reloj seguidos, se la acepta
+// como el nuevo valor estable. Si en cualquier momento vuelve a coincidir
+// con la estable (rebote), el contador se limpia y hay que esperar otros
+// 262144 ciclos de estabilidad para que se acepte cualquier cambio futuro.
 //
-// NOTA: el umbral de 256 ciclos hay que ajustarlo en la Fase 6 segun la
-// frecuencia real del oscilador de la Nandland Go Board (dato que se busca
-// en la documentacion de la placa, no se inventa) para que equivalga a
-// unos ~10ms reales. Con un incrementador_8bits mas ancho (o encadenando
-// dos) se puede lograr un umbral mayor si hiciera falta.
+// Umbral real: a 25MHz (reloj confirmado de la Nandland Go Board, Fase 6),
+// 262144 ciclos = 262144 / 25e6 s = ~10.5 ms, que es un tiempo tipico de
+// rebote mecanico real. Se probo primero con un umbral de 256 ciclos
+// (~10 microsegundos) que resulto ser 1000 veces demasiado corto en la
+// placa real -- los botones generaban varios pulsos falsos por cada
+// apreton porque el rebote mecanico real dura mucho mas que eso. Bug
+// descubierto probando en hardware real (no aparece en simulacion con
+// señales limpias, sin rebote, como las que arma un testbench).
 //
-// Reutiliza contador_incremental_8bits.v, mux2_1.v y dff.v, todos ya
+// Reutiliza contador_incremental_18bits.v, mux2_1.v y dff.v, todos ya
 // verificados.
 
 module debounce (
@@ -31,14 +34,16 @@ module debounce (
     not (igual, diferente);
     or  (limpiar_cnt, igual, reset);
 
-    wire [7:0] cnt;
-    contador_incremental_8bits contador (
+    wire [17:0] cnt;
+    contador_incremental_18bits contador (
         .incrementar(diferente), .limpiar(limpiar_cnt), .clk(clk), .Q(cnt)
     );
 
-    // lleno = 1 cuando el contador llego a 11111111 (256 ciclos distinto)
+    // lleno = 1 cuando el contador llego a todos 1 (262144 ciclos distinto, ~10.5ms a 25MHz)
     wire lleno;
-    and (lleno, cnt[0], cnt[1], cnt[2], cnt[3], cnt[4], cnt[5], cnt[6], cnt[7]);
+    and (lleno, cnt[0], cnt[1], cnt[2], cnt[3], cnt[4], cnt[5], cnt[6], cnt[7],
+                cnt[8], cnt[9], cnt[10], cnt[11], cnt[12], cnt[13], cnt[14],
+                cnt[15], cnt[16], cnt[17]);
 
     wire tras_actualizar, siguiente;
     mux2_1 sel_actualizar (.a(boton_estable), .b(boton_crudo), .sel(lleno), .salida(tras_actualizar));
