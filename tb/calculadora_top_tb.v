@@ -1,0 +1,181 @@
+// calculadora_top_tb.v
+// Testbench de integracion de punta a punta del modulo top: mueve los
+// PINES CRUDOS de los botones (como si fuera un dedo apretando la
+// placa real), pasando por reset, debounce, deteccion de flanco, la FSM
+// completa y los dos displays de 7 segmentos. Secuencia de 2 rondas:
+// una suma normal y una resta usando "resultado anterior" como
+// segundo operando, revisando en cada paso los LEDs y los 14 segmentos.
+
+`timescale 1ns/1ps
+
+module calculadora_top_tb;
+
+    reg  clk;
+    reg  boton_subir_crudo, boton_bajar_crudo, boton_confirmar_crudo, boton_anterior_crudo;
+    wire [3:0] leds;
+    wire seg1_a, seg1_b, seg1_c, seg1_d, seg1_e, seg1_f, seg1_g;
+    wire seg2_a, seg2_b, seg2_c, seg2_d, seg2_e, seg2_f, seg2_g;
+
+    integer errores;
+
+    calculadora_top dut (
+        .clk(clk),
+        .boton_subir_crudo(boton_subir_crudo),
+        .boton_bajar_crudo(boton_bajar_crudo),
+        .boton_confirmar_crudo(boton_confirmar_crudo),
+        .boton_anterior_crudo(boton_anterior_crudo),
+        .leds(leds),
+        .seg1_a(seg1_a), .seg1_b(seg1_b), .seg1_c(seg1_c), .seg1_d(seg1_d),
+        .seg1_e(seg1_e), .seg1_f(seg1_f), .seg1_g(seg1_g),
+        .seg2_a(seg2_a), .seg2_b(seg2_b), .seg2_c(seg2_c), .seg2_d(seg2_d),
+        .seg2_e(seg2_e), .seg2_f(seg2_f), .seg2_g(seg2_g)
+    );
+
+    initial clk = 0;
+    always #10 clk = ~clk;
+
+    // Mantiene un boton "apretado" el tiempo suficiente para pasar los
+    // 256 ciclos del debounce y que el detector de flanco genere su
+    // pulso, y despues lo "suelta" el tiempo suficiente para que el
+    // debounce tambien acepte la soltada (deja todo listo para el
+    // siguiente apreton).
+    //
+    // NOTA: se referencian directamente los reg de arriba (subir/bajar/
+    // confirmar/anterior) en vez de usar un argumento "output" del task,
+    // porque en Verilog un argumento output de task solo se copia de
+    // vuelta a la variable real cuando el task TERMINA (no durante los
+    // @(posedge clk) intermedios) -- con "output" el DUT nunca habria
+    // visto el boton en 1. Un task puede leer/escribir libremente las
+    // variables de su propio modulo, asi que esto evita ese problema.
+    localparam SUBIR = 0, BAJAR = 1, CONFIRMAR = 2, ANTERIOR = 3;
+
+    task presionar;
+        input integer cual;
+        begin
+            case (cual)
+                SUBIR:     boton_subir_crudo     = 1;
+                BAJAR:     boton_bajar_crudo     = 1;
+                CONFIRMAR: boton_confirmar_crudo = 1;
+                ANTERIOR:  boton_anterior_crudo  = 1;
+            endcase
+            repeat (300) @(posedge clk);
+            case (cual)
+                SUBIR:     boton_subir_crudo     = 0;
+                BAJAR:     boton_bajar_crudo     = 0;
+                CONFIRMAR: boton_confirmar_crudo = 0;
+                ANTERIOR:  boton_anterior_crudo  = 0;
+            endcase
+            repeat (300) @(posedge clk);
+        end
+    endtask
+
+    task verificar;
+        input [255:0] nombre;
+        input [3:0] leds_esperado;
+        input [6:0] signo_esperado; // {seg1_a..seg1_g}
+        input [6:0] hex_esperado;   // {seg2_a..seg2_g}
+        reg   [6:0] signo_obtenido, hex_obtenido;
+        begin
+            signo_obtenido = {seg1_a, seg1_b, seg1_c, seg1_d, seg1_e, seg1_f, seg1_g};
+            hex_obtenido   = {seg2_a, seg2_b, seg2_c, seg2_d, seg2_e, seg2_f, seg2_g};
+            if (leds !== leds_esperado || signo_obtenido !== signo_esperado || hex_obtenido !== hex_esperado) begin
+                errores = errores + 1;
+                $display("FALLO %0s: leds=%b(esp %b) signo=%b(esp %b) hex=%b(esp %b)",
+                          nombre, leds, leds_esperado, signo_obtenido, signo_esperado, hex_obtenido, hex_esperado);
+            end else begin
+                $display("OK %0s: leds=%b signo=%b hex=%b", nombre, leds, signo_obtenido, hex_obtenido);
+            end
+        end
+    endtask
+
+    initial begin
+        $dumpfile("calculadora_top_tb.vcd");
+        $dumpvars(0, calculadora_top_tb);
+        errores = 0;
+
+        boton_subir_crudo = 0; boton_bajar_crudo = 0;
+        boton_confirmar_crudo = 0; boton_anterior_crudo = 0;
+
+        // ---- Reset: mantener subir+bajar juntos un ciclo ----
+        boton_subir_crudo = 1; boton_bajar_crudo = 1;
+        @(posedge clk); #1;
+        boton_subir_crudo = 0; boton_bajar_crudo = 0;
+        repeat (10) @(posedge clk); #1;
+        verificar("reset", 4'b0000, 7'b1111111, 7'b1111111);
+
+        // ---- Elegir operacion: subir una vez -> 001 (suma) ----
+        presionar(SUBIR); #1;
+        verificar("elegir suma", 4'b0001, 7'b1111111, 7'b1111111);
+
+        // ---- Confirmar -> INGRESA_OP1 (op1 arranca en 0) ----
+        presionar(CONFIRMAR); #1;
+        verificar("entra op1 (=0)", 4'b0001, 7'b1111111, 7'b0000001);
+
+        // ---- Subir x5 -> op1 = 5 ----
+        presionar(SUBIR);
+        presionar(SUBIR);
+        presionar(SUBIR);
+        presionar(SUBIR);
+        presionar(SUBIR);
+        #1;
+        verificar("op1 = 5", 4'b0001, 7'b1111111, 7'b0100100);
+
+        // ---- Confirmar -> INGRESA_OP2 (op2 arranca en 0) ----
+        presionar(CONFIRMAR); #1;
+        verificar("entra op2 (=0)", 4'b0001, 7'b1111111, 7'b0000001);
+
+        // ---- Subir x3 -> op2 = 3 ----
+        presionar(SUBIR);
+        presionar(SUBIR);
+        presionar(SUBIR);
+        #1;
+        verificar("op2 = 3", 4'b0001, 7'b1111111, 7'b0000110);
+
+        // ---- Confirmar -> ejecuta 5+3=8 (1000, negativo en 4 bits) y MUESTRA_RESULTADO ----
+        presionar(CONFIRMAR); #1;
+        verificar("resultado 5+3=8", 4'b0001, 7'b1111110, 7'b0000000);
+
+        // ---- Confirmar -> vuelve a ELEGIR_OPERACION ----
+        presionar(CONFIRMAR); #1;
+        verificar("vuelve a elegir", 4'b0001, 7'b1111111, 7'b1111111);
+
+        // ==== Segunda ronda: resta usando "resultado anterior" ====
+
+        // ---- Subir una vez mas -> 010 (resta) ----
+        presionar(SUBIR); #1;
+        verificar("elegir resta", 4'b0010, 7'b1111111, 7'b1111111);
+
+        // ---- Confirmar -> INGRESA_OP1 (retiene op1=5 de la ronda anterior) ----
+        presionar(CONFIRMAR); #1;
+        verificar("entra op1 (=5, retenido)", 4'b0010, 7'b1111111, 7'b0100100);
+
+        // ---- Bajar x3 -> op1 = 2 ----
+        presionar(BAJAR);
+        presionar(BAJAR);
+        presionar(BAJAR);
+        #1;
+        verificar("op1 = 2", 4'b0010, 7'b1111111, 7'b0010010);
+
+        // ---- Confirmar -> INGRESA_OP2 (retiene op2=3 de la ronda anterior) ----
+        presionar(CONFIRMAR); #1;
+        verificar("entra op2 (=3, retenido)", 4'b0010, 7'b1111111, 7'b0000110);
+
+        // ---- Anterior -> selecciona el resultado previo (8) como op2 ----
+        presionar(ANTERIOR); #1;
+        verificar("op2 = anterior (8)", 4'b1010, 7'b1111110, 7'b0000000);
+
+        // ---- Confirmar -> ejecuta 2-8 (mod16) = 10 (1010) y MUESTRA_RESULTADO ----
+        presionar(CONFIRMAR); #1;
+        verificar("resultado 2-8=10", 4'b1010, 7'b1111110, 7'b0001000);
+
+        // ---- Confirmar -> vuelve a ELEGIR_OPERACION, selector se limpia ----
+        presionar(CONFIRMAR); #1;
+        verificar("vuelve a elegir, selector limpio", 4'b0010, 7'b1111111, 7'b1111111);
+
+        if (errores == 0) $display("TODOS LOS CASOS PASARON (13/13).");
+        else $display("%0d CASOS FALLARON.", errores);
+
+        $finish;
+    end
+
+endmodule
