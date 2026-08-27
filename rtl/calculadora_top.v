@@ -40,12 +40,30 @@ module calculadora_top (
     output wire seg2_a, seg2_b, seg2_c, seg2_d, seg2_e, seg2_f, seg2_g  // segundo display: hex
 );
 
-    // ---- 1) Reset global (combinacional, sin flip-flops) ----
-    wire reset;
+    // ---- 1) Reset global ----
+    // reset_bruto: combinacional puro (sin flip-flops), AND de los botones
+    // crudos -- necesario para tener un valor bien definido desde que se
+    // enciende la placa (ver el gotcha de arranque indefinido en el
+    // proyecto).
+    //
+    // reset (extendido): reset_bruto solo, apenas se suelta CUALQUIERA de
+    // los dos botones, deja de estar forzado -- si en ese instante el
+    // boton soltado todavia esta rebotando, ese rebote puede colarse como
+    // pulsos falsos antes de que el propio debounce lo filtre (bug
+    // encontrado probando en la placa real: al soltar el reset, los LEDs
+    // volvian a mostrar un codigo de operacion incorrecto). extensor_reset
+    // mantiene "reset" en 1 un rato mas (~10.5ms) despues de soltar, dando
+    // tiempo a que el rebote de la soltada se asiente antes de que el
+    // resto de la calculadora (incluidos los 4 debounce de abajo) vuelva
+    // a operar normal.
+    wire reset_bruto, reset;
     generador_reset gen_reset (
         .boton_subir_crudo(boton_subir_crudo),
         .boton_bajar_crudo(boton_bajar_crudo),
-        .reset(reset)
+        .reset(reset_bruto)
+    );
+    extensor_reset ext_reset (
+        .reset_bruto(reset_bruto), .clk(clk), .reset(reset)
     );
 
     // ---- 2) Debounce de los 4 botones ----

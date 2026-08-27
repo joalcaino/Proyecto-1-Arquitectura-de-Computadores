@@ -109,11 +109,16 @@ module calculadora_top_tb;
         boton_subir_crudo = 0; boton_bajar_crudo = 0;
         boton_confirmar_crudo = 0; boton_anterior_crudo = 0;
 
-        // ---- Reset: mantener subir+bajar juntos un ciclo ----
+        // ---- Reset: mantener subir+bajar juntos un ciclo, despues soltar
+        // y esperar el tiempo COMPLETO de extension del reset (~262144
+        // ciclos -- ver extensor_reset.v) antes de seguir. Este tiempo de
+        // espera es nuevo: antes bastaba con 10 ciclos, pero ahora el
+        // reset se queda extendido a proposito para filtrar el rebote de
+        // la soltada (bug encontrado en la placa real). ----
         boton_subir_crudo = 1; boton_bajar_crudo = 1;
         @(posedge clk); #1;
         boton_subir_crudo = 0; boton_bajar_crudo = 0;
-        repeat (10) @(posedge clk); #1;
+        repeat (HOLD) @(posedge clk); #1;
         verificar("reset", 4'b0000, 7'b1111111, 7'b1111111);
 
         // ---- Elegir operacion: subir una vez -> 001 (suma) ----
