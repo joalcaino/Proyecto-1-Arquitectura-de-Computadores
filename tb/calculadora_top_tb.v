@@ -35,7 +35,7 @@ module calculadora_top_tb;
     always #10 clk = ~clk;
 
     // Mantiene un boton "apretado" el tiempo suficiente para pasar los
-    // 262144 ciclos del debounce real (~10.5ms a 25MHz -- ver debounce.v)
+    // 4096 ciclos del debounce real (~164us a 25MHz -- ver debounce.v)
     // y que el detector de flanco genere su pulso, y despues lo "suelta"
     // el tiempo suficiente para que el debounce tambien acepte la soltada
     // (deja todo listo para el siguiente apreton).
@@ -48,13 +48,13 @@ module calculadora_top_tb;
     // visto el boton en 1. Un task puede leer/escribir libremente las
     // variables de su propio modulo, asi que esto evita ese problema.
     //
-    // AVISO: con el umbral real (262144, antes era 256 en una version
-    // vieja que resulto ser demasiado corta en la placa real -- ver el
-    // gotcha de debounce en el proyecto), esta secuencia de 13 pasos
-    // simula bastante tiempo real y puede tardar varios minutos en
-    // correr con Icarus. Es normal, no es que este colgado.
+    // AVISO: el umbral de debounce paso por tres versiones (256 ciclos ->
+    // demasiado corto para el rebote real; 262144 ciclos/18 bits -> umbral
+    // correcto pero cadena de sumadores demasiado larga, no cerraba tiempo
+    // a 25MHz en el chip real; 4096 ciclos/12 bits -> version actual,
+    // verificada en la placa). Ver el historial completo en debounce.v.
     localparam SUBIR = 0, BAJAR = 1, CONFIRMAR = 2, ANTERIOR = 3;
-    localparam HOLD = 262200; // >262144, con margen
+    localparam HOLD = 4200; // >4096, con margen
 
     task presionar;
         input integer cual;
