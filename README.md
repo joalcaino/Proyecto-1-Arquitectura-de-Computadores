@@ -16,6 +16,24 @@ docs/       Documentación auxiliar.
 calculadora_top.pcf   Mapeo de pines de calculadora_top a la Nandland Go Board.
 informe.pdf           Informe con diseño, tablas de verdad, mapas de Karnaugh y resultados.
 ```
+## Tabla de operaciones 
+| LEDs (OP2 OP1 OP0) | Operación |
+|---|---|
+| 000 | Reinicio (resultado = 0) |
+| 001 | Suma (op1 + op2) |
+| 010 | Resta (op1 - op2) |
+| 011 | Resta inversa (op2 - op1) |
+| 100 | Shift left (op1 << op2[1:0]) |
+| 101 | Shift right (op1 >> op2[1:0]) |
+
+## Arquitectura del código
+
+El diseño está dividido en tres capas:
+
+- **Capa física** (debounce.v, detector_flanco.v, generador_reset.v, extensor_reset.v): Ayuda con el ruido mecánico de los botones físicos y genera señales limpias.
+- **Capa de cómputo** (alu.v, sumador_restador_4bits.v, barrel_shifter_left.v, barrel_shifter_right.v, calcladora_datapath.v): Ejecutan las operaciones aritméticas y de desplazamiento. Almacena el resultado de la operación.
+- **Capa de control** (calculadora_control.v, calculadora_top.v): implementa la máquina de estados que coordina el flujo de la calculadora. (Elegir operación -> ingresar op1 -> ingresar op2 -> mostrar resultado).
+
 
 ## Requisitos
 
@@ -77,3 +95,7 @@ Notas importantes:
 4. **Ingresar op2:** igual que op1, o presionar el botón inferior derecho para usar el resultado de la operación anterior en su lugar. Confirmar para ejecutar.
 5. **Resultado:** se muestra en los displays. Presionar confirmar de nuevo vuelve a elegir operación.
 6. **Reset:** mantener presionados juntos los botones superior izquierdo e inferior izquierdo.
+
+## Cómo leer los displays 
+
+Los números se representan en complemento a 2 de 4 bits (rango -8 a 7). El display izquierdo muestra el signo ("-" o nada en caso positivo), y el derecho muestra la magnitud en formato hexadecimal. Si el resultado excede el rango se produce overflow y el resultado se trunca a 4 bits (es decir, se corta el último valor).
