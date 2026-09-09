@@ -56,6 +56,21 @@ Para simular otro módulo, cambia el testbench del final por el que corresponda 
 
 **Nota:** el testbench de `calculadora_top` (`calculadora_top_tb.v`) simula tiempos reales de debounce (~262.000 ciclos de reloj por cada apretón de botón simulado), así que puede tardar varios minutos en correr completo — es normal, no está colgado.
 
+## Interfaz para testbench externo
+
+Si el testbench del evaluador usa la interfaz "calculadora_4bits", crear el archivo "rtl/calculadora_4bits.v" con un wrapper que conecte directamente la ALU y el registro de resultado, sin FSM ni debounce. Los puertos requeridos son:
+
+```verilog
+module calculadora_4bits (
+    input  wire       clk,
+    input  wire       ejecutar,
+    input  wire [2:0] codigo,
+    input  wire       sel_op2,
+    input  wire [3:0] op1,
+    input  wire [3:0] op2_ext,
+    output wire [3:0] resultado
+);
+```
 ### Cambiar los valores/operaciones de una simulación
 
 Durante la evaluación, el profesor indicará qué operación y valores probar. Para eso, edita directamente el bloque `initial` del testbench correspondiente (por ejemplo `tb/calculadora_top_tb.v`, sección `initial begin ... end`), cambiando los valores que se ingresan con `presionar(SUBIR)`/`presionar(BAJAR)` o el operando de un testbench más simple, guarda el archivo, y vuelve a correr los dos comandos de arriba (`iverilog` + `vvp`).
@@ -86,6 +101,7 @@ Notas importantes:
 - El flag `-noabc` es necesario porque el diseño arma todos sus flip-flops con compuertas puras (no usa el flip-flop nativo del chip, está prohibido por el enunciado). Sin `-noabc`, algunas versiones de Yosys fallan con `ERROR: Found combinatorial logic loop` al toparse con esos flip-flops. Si tu versión de Yosys no reconoce `-noabc`, corre `yosys -p "help synth_ice40" 2>&1 | grep -E "^    -"` para ver los flags disponibles (versiones más viejas usaban `-noabc9`).
 - `nextpnr-ice40` va a reportar bastantes warnings de "logic loop" y terminar con `No Fmax available; no interior timing paths found in design` — esto es esperado y no es un error: como el diseño no usa flip-flops nativos, no existe análisis de timing formal posible para él. Lo relevante es que termine con `Program finished normally`.
 - En WSL, si `iceprog` falla con `Can't find iCE FTDI USB device`, hay que volver a conectar el dispositivo USB a WSL desde una PowerShell como administrador: `usbipd list` (para ver el BUSID de la placa) y `usbipd attach --wsl --busid <BUSID>`.
+
 
 ## Cómo se usa la calculadora en la placa
 
